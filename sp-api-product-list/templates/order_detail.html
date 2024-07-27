@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 py-8">
+    <div class="max-w-4xl mx-auto bg-white p-8 shadow-lg">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold">Invoice</h1>
+                <p class="text-sm text-gray-600">Sold by: Your Company Name</p>
+                <p class="text-sm text-gray-600">Company Address Line 1</p>
+                <p class="text-sm text-gray-600">Company Address Line 2</p>
+                <p class="text-sm text-gray-600">City, State, Zip Code</p>
+            </div>
+            <div>
+                <img src="https://via.placeholder.com/150x50?text=Your+Logo" alt="Company Logo" class="h-12">
+            </div>
+        </div>
+
+        <!-- Order Details -->
+        <div class="border-t border-b border-gray-200 py-4 mb-6">
+            <h2 class="text-xl font-semibold mb-2">Order Details</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p><strong>Amazon Order ID:</strong> {{ order['payload']['AmazonOrderId'] }}</p>
+                    <p><strong>Purchase Date:</strong> {{ order['payload']['PurchaseDate'] }}</p>
+                    <p><strong>Order Status:</strong> {{ order['payload']['OrderStatus'] }}</p>
+                    <p><strong>Order Total:</strong> ₹{{ order['payload']['OrderTotal']['Amount'] }}</p>
+                    <p><strong>Payment Method:</strong> {{ order['payload']['PaymentMethodDetails'][0] if order['payload'].get('PaymentMethodDetails') else 'N/A' }}</p>
+                </div>
+                <div>
+                    <p><strong>Fulfillment Channel:</strong> {{ order['payload']['FulfillmentChannel'] }}</p>
+                    <p><strong>Earliest Ship Date:</strong> {{ order['payload']['EarliestShipDate'] }}</p>
+                    <p><strong>Latest Ship Date:</strong> {{ order['payload']['LatestShipDate'] }}</p>
+                    <p><strong>Shipment Service Level:</strong> {{ order['payload']['ShipServiceLevel'] }}</p>
+                    <p><strong>Shipment Status:</strong> {{ order['payload'].get('EasyShipShipmentStatus', 'N/A') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buyer Information -->
+        <div class="border-b border-gray-200 py-4 mb-6">
+            <h2 class="text-xl font-semibold mb-2">Buyer Information</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p><strong>Name:</strong> {{ order['payload']['BuyerInfo']['BuyerName'] if order['payload']['BuyerInfo'].get('BuyerName') else 'N/A' }}</p>
+                    <p>{{ order['payload']['ShippingAddress']['AddressLine2'] if order['payload']['ShippingAddress'].get('AddressLine2') else '' }}</p>
+                    <p>{{ order['payload']['ShippingAddress']['City'] }}, {{ order['payload']['ShippingAddress']['StateOrRegion'] }}, {{ order['payload']['ShippingAddress']['PostalCode'] }}</p>
+                </div>
+                <div>
+                    <p><strong>Email:</strong> {{ order['payload']['BuyerInfo']['BuyerEmail'] }}</p>
+                    <p><strong>Phone:</strong> {{ order['payload']['ShippingAddress']['Phone'] if order['payload']['ShippingAddress'].get('Phone') else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item Details -->
+        <div class="border-b border-gray-200 py-4 mb-6">
+            <h2 class="text-xl font-semibold mb-2">Item Details</h2>
+            <div class="text-sm">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th class="py-2">Item Name</th>
+                            <th class="py-2">Quantity</th>
+                            <th class="py-2">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items['payload']['OrderItems'] %}
+                        <tr>
+                            <td class="border px-4 py-2">{{ item['Title'] }}</td>
+                            <td class="border px-4 py-2">{{ item['QuantityOrdered'] }}</td>
+                            <td class="border px-4 py-2">₹{{ item['ItemPrice']['Amount'] if item.get('ItemPrice') else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="border-b border-gray-200 py-4">
+            <h2 class="text-xl font-semibold mb-2">Additional Information</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <p><strong>Marketplace ID:</strong> {{ order['payload']['MarketplaceId'] }}</p>
+                    <p><strong>Last Update Date:</strong> {{ order['payload']['LastUpdateDate'] }}</p>
+                </div>
+                <div>
+                    <p><strong>Is Prime:</strong> {{ order['payload']['IsPrime'] }}</p>
+                    <p><strong>Is Business Order:</strong> {{ order['payload']['IsBusinessOrder'] }}</p>
+                    <p><strong>Is Replacement Order:</strong> {{ order['payload']['IsReplacementOrder'] }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-8 flex justify-end space-x-4">
+            <button onclick="window.print()" class="px-4 py-2 bg-blue-500 text-white rounded shadow">Print Invoice</button>
+            <button onclick="downloadPDF()" class="px-4 py-2 bg-green-500 text-white rounded shadow">Download PDF</button>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-sm text-gray-600">
+            <p>Thank you for your purchase!</p>
+            <p>If you have any questions, feel free to contact us at support@example.com.</p>
+        </div>
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Invoice", 20, 10);
+            doc.text("Sold by: Your Company Name", 20, 20);
+            doc.text("Company Address Line 1", 20, 30);
+            doc.text("Company Address Line 2", 20, 40);
+            doc.text("City, State, Zip Code", 20, 50);
+            doc.text("Amazon Order ID: {{ order['payload']['AmazonOrderId'] }}", 20, 70);
+            doc.text("Purchase Date: {{ order['payload']['PurchaseDate'] }}", 20, 80);
+            doc.text("Order Status: {{ order['payload']['OrderStatus'] }}", 20, 90);
+            doc.text("Order Total: ₹{{ order['payload']['OrderTotal']['Amount'] }}", 20, 100);
+            doc.text("Payment Method: {{ order['payload']['PaymentMethodDetails'][0] if order['payload'].get('PaymentMethodDetails') else 'N/A' }}", 20, 110);
+            doc.text("Fulfillment Channel: {{ order['payload']['FulfillmentChannel'] }}", 20, 130);
+            doc.text("Earliest Ship Date: {{ order['payload']['EarliestShipDate'] }}", 20, 140);
+            doc.text("Latest Ship Date: {{ order['payload']['LatestShipDate'] }}", 20, 150);
+            doc.text("Shipment Service Level: {{ order['payload']['ShipServiceLevel'] }}", 20, 160);
+            doc.text("Shipment Status: {{ order['payload'].get('EasyShipShipmentStatus', 'N/A') }}", 20, 170);
+            
+            let yPosition = 180;
+            {% for item in order_items['payload']['OrderItems'] %}
+            doc.text(`Item Name: {{ item['Title'] }}`, 20, yPosition);
+            doc.text(`Quantity: {{ item['QuantityOrdered'] }}`, 20, yPosition + 10);
+            doc.text(`Price: ₹{{ item['ItemPrice']['Amount'] if item.get('ItemPrice') else 'N/A' }}`, 20, yPosition + 20);
+            yPosition += 40; // Increase Y position for next item
+            {% endfor %}
+            
+            doc.save("invoice.pdf");
+        }
+    </script>
+    
+</body>
+</html>

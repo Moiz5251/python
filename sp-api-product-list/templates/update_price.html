@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Product Price</title>
+</head>
+<body>
+    <h1>Update Product Price</h1>
+    <form action="/update-product-price" method="post">
+        <label for="sku">Product SKU:</label>
+        <input type="text" id="sku" name="sku" required><br><br>
+        
+        <label for="price">New Price:</label>
+        <input type="text" id="price" name="price" required><br><br>
+        
+        <input type="submit" value="Update Price">
+    </form>
+
+    {% if response %}
+        <h2>Response:</h2>
+        <pre>{{ response | tojson(indent=2) }}</pre>
+    {% endif %}
+</body>
+</html>
